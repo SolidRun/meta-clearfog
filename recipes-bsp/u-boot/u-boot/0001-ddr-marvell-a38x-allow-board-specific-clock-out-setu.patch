@@ -1,0 +1,68 @@
+From 2b1e83879385c78e4af2b6a2f15938b6fce1f1b4 Mon Sep 17 00:00:00 2001
+From: Baruch Siach <baruch@tkos.co.il>
+Date: Thu, 16 May 2019 15:31:50 +0300
+Subject: [PATCH] ddr: marvell: a38x: allow board specific clock out setup
+
+DDR clock out might be unrelated to the number of active chip-select.
+For example, the board might have two DDR components, but only one
+chip-select. The clk_enable mask allows the board to enable DDR clocks
+regardless of active chip-selects.
+
+Signed-off-by: Baruch Siach <baruch@tkos.co.il>
+---
+ drivers/ddr/marvell/a38x/ddr3_training.c    | 10 ++++++++--
+ drivers/ddr/marvell/a38x/ddr_topology_def.h |  3 +++
+ 2 files changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/ddr/marvell/a38x/ddr3_training.c b/drivers/ddr/marvell/a38x/ddr3_training.c
+index c7be700d641f..9718f18c3024 100644
+--- a/drivers/ddr/marvell/a38x/ddr3_training.c
++++ b/drivers/ddr/marvell/a38x/ddr3_training.c
+@@ -280,8 +280,14 @@ int ddr3_tip_configure_cs(u32 dev_num, u32 if_id, u32 cs_num, u32 enable)
+ {
+ 	u32 data, addr_hi, data_high;
+ 	u32 mem_index;
++	u32 clk_enable;
+ 	struct mv_ddr_topology_map *tm = mv_ddr_topology_map_get();
+ 
++	if (tm->clk_enable & (1 << cs_num))
++		clk_enable = 1;
++	else
++		clk_enable = enable;
++
+ 	if (enable == 1) {
+ 		data = (tm->interface_params[if_id].bus_width ==
+ 			MV_DDR_DEV_WIDTH_8BIT) ? 0 : 1;
+@@ -316,13 +322,13 @@ int ddr3_tip_configure_cs(u32 dev_num, u32 if_id, u32 cs_num, u32 enable)
+ 	case 2:
+ 		CHECK_STATUS(ddr3_tip_if_write
+ 			     (dev_num, ACCESS_TYPE_UNICAST, if_id,
+-			      DUNIT_CTRL_LOW_REG, (enable << (cs_num + 11)),
++			      DUNIT_CTRL_LOW_REG, (clk_enable << (cs_num + 11)),
+ 			      1 << (cs_num + 11)));
+ 		break;
+ 	case 3:
+ 		CHECK_STATUS(ddr3_tip_if_write
+ 			     (dev_num, ACCESS_TYPE_UNICAST, if_id,
+-			      DUNIT_CTRL_LOW_REG, (enable << 15), 1 << 15));
++			      DUNIT_CTRL_LOW_REG, (clk_enable << 15), 1 << 15));
+ 		break;
+ 	}
+ 
+diff --git a/drivers/ddr/marvell/a38x/ddr_topology_def.h b/drivers/ddr/marvell/a38x/ddr_topology_def.h
+index e6fe8a04289b..950f296ff984 100644
+--- a/drivers/ddr/marvell/a38x/ddr_topology_def.h
++++ b/drivers/ddr/marvell/a38x/ddr_topology_def.h
+@@ -124,6 +124,9 @@ struct mv_ddr_topology_map {
+ 
+ 	/* electrical parameters */
+ 	unsigned int electrical_data[MV_DDR_EDATA_LAST];
++
++	/* Clock enable mask */
++	u32 clk_enable;
+ };
+ 
+ enum mv_ddr_iface_mode {
+-- 
+2.23.0
+
