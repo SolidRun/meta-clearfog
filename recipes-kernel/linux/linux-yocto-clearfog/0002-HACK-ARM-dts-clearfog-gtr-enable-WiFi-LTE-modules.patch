@@ -1,0 +1,46 @@
+From a8c68ecebf42c0fae9447e53f1010bc947a4ccde Mon Sep 17 00:00:00 2001
+From: Baruch Siach <baruch@tkos.co.il>
+Date: Sun, 1 Sep 2019 12:33:25 +0300
+Subject: [PATCH] HACK: ARM: dts: clearfog-gtr: enable WiFi/LTE modules
+
+Deactivate the lte-disable/wifi-disable signals on CON2/3/4 mini-PCIe
+slots using gpio hogs. This might be racy as it depends on gpio probe
+running before PCI probe. A more robust solution TBD.
+---
+ arch/arm/boot/dts/armada-385-clearfog-gtr.dtsi | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/arch/arm/boot/dts/armada-385-clearfog-gtr.dtsi b/arch/arm/boot/dts/armada-385-clearfog-gtr.dtsi
+index 4e3fc8a5060d..fc658fcae196 100644
+--- a/arch/arm/boot/dts/armada-385-clearfog-gtr.dtsi
++++ b/arch/arm/boot/dts/armada-385-clearfog-gtr.dtsi
+@@ -407,12 +407,26 @@
+ &gpio0 {
+ 	pinctrl-0 = <&cf_gtr_fan_pwm>;
+ 	pinctrl-names = "default";
++
++	wifi-disable {
++		gpio-hog;
++		gpios = <30 GPIO_ACTIVE_LOW>, <31 GPIO_ACTIVE_LOW>;
++		output-low;
++		line-name = "wifi-disable";
++	};
+ };
+ 
+ &gpio1 {
+ 	pinctrl-0 = <&cf_gtr_isolation_pins &cf_gtr_poe_reset_pins>;
+ 	pinctrl-names = "default";
+ 
++	lte-disable {
++		gpio-hog;
++		gpios = <2 GPIO_ACTIVE_LOW>;
++		output-low;
++		line-name = "lte-disable";
++	};
++
+ 	sar-isolation {
+ 		gpio-hog;
+ 		gpios = <15 GPIO_ACTIVE_LOW>;
+-- 
+2.23.0
+
